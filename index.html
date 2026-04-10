@@ -271,7 +271,7 @@ let bH = bW / ratio;
         const pageFlip = new St.PageFlip(bookContainer, {
             width: bW, height: bH, size: "fixed",
             minWidth: bW, maxWidth: bW, minHeight: bH, maxHeight: bH,
-            usePortrait: true, showCover: false, drawShadow: false, flippingTime: 1000
+            usePortrait: true, showCover: false, drawShadow: true, flippingTime: 1000
         });
 
         setTimeout(() => {
