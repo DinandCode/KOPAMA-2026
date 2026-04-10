@@ -23,6 +23,17 @@
             position: relative; transition: filter 0.4s ease;
         }
 
+        /* Secara default, buat viewer agak blur */
+#viewer-ss {
+    filter: blur(40px);
+    transition: filter 0.3s ease;
+}
+
+/* Hilangkan blur hanya saat layar sedang ditekan/disentuh */
+#viewer-ss.active {
+    filter: blur(0px);
+}
+
         /* Watermark Samun */
         .watermark {
             position: fixed; top: 50%; left: 50%;
@@ -63,7 +74,7 @@
         .nav-left { left: 0; } .nav-right { right: 0; }
 
         #page-info { 
-            position: absolute; bottom: 20px; background: rgba(0,0,0,0.7); 
+            position: absolute; bottom: 15px; background: rgba(0,0,0,0.7); 
             color: white; padding: 8px 18px; border-radius: 20px; 
             font-size: 14px; z-index: 110; display: none; 
         }
@@ -111,8 +122,8 @@
 const CONFIG = {
     pdfPath: "docs/LPJ KOPAMA 2026dikompresi.pdf", 
     tanggalAkses: "2026-04-10", 
-    jamBuka: "10:40",
-    jamTutup: "10:50"
+    jamBuka: "11:00",
+    jamTutup: "12:00"
 };
 
 let isStarted = false;
@@ -121,13 +132,30 @@ const flipSound = document.getElementById('flip-sound');
 // Tampilkan info jadwal di layar kunci
 document.getElementById('schedule-text').innerText = `Jadwal: ${CONFIG.tanggalAkses} | ${CONFIG.jamBuka} - ${CONFIG.jamTutup} WIB`;
 
-/**
- * PROTEKSI KEAMANAN
- */
-// 1. Blur saat ganti tab (anti-screenshot fokus)
-window.addEventListener('blur', () => { document.getElementById('viewer-container').style.filter = 'blur(20px)'; });
-window.addEventListener('focus', () => { document.getElementById('viewer-container').style.filter = 'none'; });
+const container = document.getElementById('viewer-ss');
 
+// Pasang event touch untuk HP
+document.addEventListener('touchstart', () => {
+    container.classList.add('active');
+});
+
+document.addEventListener('touchend', () => {
+    // Beri sedikit delay agar tidak kedap-kedip saat membalik halaman
+    setTimeout(() => {
+        container.classList.remove('active');
+    }, 500); 
+});
+
+// Saat user mencoba berpindah fokus (misal: mau pencet tombol SS di menu bar)
+window.addEventListener('blur', () => {
+    document.getElementById('viewer-container').style.filter = 'blur(60px)';
+    document.getElementById('viewer-container').style.transition = '0.1s';
+});
+
+// Saat user kembali ke halaman
+window.addEventListener('focus', () => {
+    document.getElementById('viewer-container').style.filter = 'none';
+});
 // 2. Blokir Tombol Keyboard (F12, PrintScreen, Ctrl+S, dll)
 document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u')) || e.key === 'F12' || e.key === 'PrintScreen') {
