@@ -33,7 +33,10 @@
 #viewer-ss.active {
     filter: blur(0px);
 }
-
+canvas {
+    image-rendering: auto;
+    backface-visibility: hidden;
+}
         /* Watermark Samun */
         .watermark {
             position: fixed; top: 50%; left: 50%;
@@ -250,7 +253,7 @@ let bH = bW / ratio;
 
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
-            const vp = page.getViewport({ scale: isMobile ? 1.4 : 1.6 });
+            const vp = page.getViewport({ scale: isMobile ? 1.2 : 1.4 });
             const pageDiv = document.createElement('div');
             pageDiv.className = 'page';
             const canvas = document.createElement('canvas');
@@ -268,19 +271,25 @@ let bH = bW / ratio;
         const pageFlip = new St.PageFlip(bookContainer, {
             width: bW, height: bH, size: "fixed",
             minWidth: bW, maxWidth: bW, minHeight: bH, maxHeight: bH,
-            usePortrait: true, showCover: false, drawShadow: true, flippingTime: 800
+            usePortrait: true, showCover: false, drawShadow: false, flippingTime: 1000
         });
 
-        pageFlip.loadFromHTML(document.querySelectorAll(".page"));
-
+        setTimeout(() => {
+    pageFlip.loadFromHTML(document.querySelectorAll(".page"));
+}, 100);
         // EVENT: Saat Halaman Berubah
-        pageFlip.on('flip', (e) => { 
-            document.getElementById('page-num').textContent = e.data + 1; 
-            
-            // Putar suara kertas
-            flipSound.currentTime = 0;
-            flipSound.play().catch(() => { /* Abaikan jika autoplay diblokir */ });
-        });
+       pageFlip.on('flip', async (e) => { 
+    document.getElementById('page-num').textContent = e.data + 1; 
+    
+    flipSound.currentTime = 0;
+    flipSound.play().catch(() => {});
+
+    // 🔥 PRELOAD halaman berikutnya
+    const nextPageIndex = e.data + 2;
+    if (nextPageIndex <= pdf.numPages) {
+        pdf.getPage(nextPageIndex);
+    }
+});
 
         document.getElementById('prev-zone').addEventListener('click', () => pageFlip.flipPrev());
         document.getElementById('next-zone').addEventListener('click', () => pageFlip.flipNext());
