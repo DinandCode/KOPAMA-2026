@@ -88,7 +88,7 @@
 
 <audio id="flip-sound" src="page-flip-01a.mp3" preload="auto"></audio>
 
-<div class="watermark">LPJ KOPAMA 2026 - CONFIDENTIAL</div>
+<div class="watermark">LPJ KOPAMA 2026 </div>
 
 <div id="access-denied">
     <div style="font-size:60px; margin-bottom: 10px;">🔒</div>
@@ -164,6 +164,18 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+function aktifkanProteksiHitam() {
+    const area = document.getElementById('area-flipbook');
+    area.style.backgroundColor = 'black'; // Ubah bg jadi hitam
+    area.style.opacity = '0';            // Hilangkan konten
+    area.style.transition = '0s';        // Instant tanpa animasi
+}
+
+function matikanProteksiHitam() {
+    const area = document.getElementById('area-flipbook');
+    area.style.backgroundColor = 'transparent';
+    area.style.opacity = '1';
+}
 /**
  * LOGIKA WAKTU & COUNTDOWN
  */
@@ -268,6 +280,16 @@ async function initFlipbook() {
 // Jalankan sistem waktu
 setInterval(tick, 1000);
 tick();
+</script>
+<script src="https://unpkg.com/screenshot-privacy-protect/dist/privacy-protect.min.js"></script>
+
+<script>
+    // Aktifkan proteksi
+    PrivacyProtect.enable({
+        feedback: true, // Munculkan peringatan jika ada upaya capture
+        watermarkText: "🔒 LPJ KOPAMA 2026 - DOKUMEN RAHASIA",
+        blurOnCapture: true // Ini yang kamu mau, dia akan nge-blur otomatis
+    });
 </script>
 </body>
 </html>
