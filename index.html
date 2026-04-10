@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LPJ KOPAMA 2026 - Flipbook</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
+
+    <style>
+        :root { --primary: #e67e22; --bg: #121212; }
+        
+        body { 
+            background: var(--bg); margin: 0; overflow: hidden; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            -webkit-user-select: none; user-select: none;
+        }
+
+        #viewer-container { 
+            width: 100vw; height: 100vh; 
+            display: flex; justify-content: center; align-items: center; 
+            position: relative; transition: filter 0.4s ease;
+        }
+
+        /* Watermark Samun */
+        .watermark {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 5vw; color: rgba(255, 255, 255, 0.05);
+            pointer-events: none; white-space: nowrap;
+            z-index: 150; text-transform: uppercase;
+        }
+
+        /* Screen Terkunci */
+        #access-denied {
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            color: white; text-align: center; background: var(--bg);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000;
+        }
+
+        .countdown-container { margin: 20px 0; display: flex; gap: 15px; }
+        .count-box {
+            background: rgba(230, 126, 34, 0.1);
+            border: 1px solid rgba(230, 126, 34, 0.3);
+            padding: 15px; border-radius: 10px; min-width: 65px;
+        }
+        .count-num { display: block; font-size: 1.8em; font-weight: bold; color: var(--primary); }
+        .count-label { font-size: 0.7em; opacity: 0.7; text-transform: uppercase; }
+
+        .time-badge { 
+            background: rgba(255,255,255,0.05); color: #fff; 
+            padding: 8px 20px; border-radius: 50px; 
+            border: 1px solid rgba(255,255,255,0.1); margin-top: 15px; font-size: 0.85em;
+        }
+
+        /* Flipbook UI */
+        .flip-book { box-shadow: 0 0 50px rgba(0,0,0,0.8); display: none; background: #fff; }
+        .page { background-color: white; overflow: hidden; }
+        canvas { width: 100% !important; height: 100% !important; display: block; }
+
+        .nav-area { position: absolute; top: 0; width: 20%; height: 100%; z-index: 100; cursor: pointer; }
+        .nav-left { left: 0; } .nav-right { right: 0; }
+
+        #page-info { 
+            position: absolute; bottom: 20px; background: rgba(0,0,0,0.7); 
+            color: white; padding: 8px 18px; border-radius: 20px; 
+            font-size: 14px; z-index: 110; display: none; 
+        }
+        
+        #loading { color: white; position: absolute; z-index: 500; text-align: center; }
+        
+        @media print { body { display: none !important; } }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<audio id="flip-sound" src="page-flip-01a.mp3" preload="auto"></audio>
+
+<div class="watermark">LPJ KOPAMA 2026 - CONFIDENTIAL</div>
+
+<div id="access-denied">
+    <div style="font-size:60px; margin-bottom: 10px;">🔒</div>
+    <h1 id="status-title">Akses Terbatas</h1>
+    <p id="status-msg" style="opacity: 0.8; max-width: 80%;">Menyiapkan dokumen digital...</p>
+
+    <div class="countdown-container" id="countdown-timer">
+        <div class="count-box"><span class="count-num" id="d">00</span><span class="count-label">Hari</span></div>
+        <div class="count-box"><span class="count-num" id="h">00</span><span class="count-label">Jam</span></div>
+        <div class="count-box"><span class="count-num" id="m">00</span><span class="count-label">Menit</span></div>
+        <div class="count-box"><span class="count-num" id="s">00</span><span class="count-label">Detik</span></div>
+    </div>
+
+    <div id="schedule-text" class="time-badge">Memuat Jadwal Sidang...</div>
+    <p style="margin-top:20px; font-size: 0.75em; opacity: 0.4;">Waktu Sistem: <span id="clock">--:--:--</span></p>
+</div>
+
+<div id="viewer-container">
+    <div id="loading">Memuat Laporan... <br><span id="percent" style="font-weight:bold; color:var(--primary);">0%</span></div>
+    
+    <div class="nav-area nav-left" id="prev-zone" title="Halaman Sebelumnya"></div>
+    <div class="nav-area nav-right" id="next-zone" title="Halaman Berikutnya"></div>
+    <div class="flip-book" id="book"></div>
+
+    <div id="page-info"><span id="page-num">1</span> / <span id="page-count"></span></div>
+</div>
+
+<script>
+/** * KONFIGURASI 
+ */
+const CONFIG = {
+    pdfPath: "docs/LPJ KOPAMA 2026-dikompresi.pdf", 
+    tanggalAkses: "2026-04-10", 
+    jamBuka: "10:10",
+    jamTutup: "10:15"
+};
+
+let isStarted = false;
+const flipSound = document.getElementById('flip-sound');
+
+// Tampilkan info jadwal di layar kunci
+document.getElementById('schedule-text').innerText = `Jadwal: ${CONFIG.tanggalAkses} | ${CONFIG.jamBuka} - ${CONFIG.jamTutup} WIB`;
+
+/**
+ * PROTEKSI KEAMANAN
+ */
+// 1. Blur saat ganti tab (anti-screenshot fokus)
+window.addEventListener('blur', () => { document.getElementById('viewer-container').style.filter = 'blur(20px)'; });
+window.addEventListener('focus', () => { document.getElementById('viewer-container').style.filter = 'none'; });
+
+// 2. Blokir Tombol Keyboard (F12, PrintScreen, Ctrl+S, dll)
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u')) || e.key === 'F12' || e.key === 'PrintScreen') {
+        e.preventDefault();
+        alert('Aksi ini dilarang demi keamanan dokumen.');
+    }
+});
+
+/**
+ * LOGIKA WAKTU & COUNTDOWN
+ */
+function tick() {
+    const now = new Date();
+    const openTime = new Date(`${CONFIG.tanggalAkses}T${CONFIG.jamBuka}:00`);
+    const closeTime = new Date(`${CONFIG.tanggalAkses}T${CONFIG.jamTutup}:00`);
+    
+    document.getElementById('clock').innerText = now.toLocaleTimeString('id-ID');
+
+    const canAccess = (now >= openTime && now < closeTime);
+
+    if (canAccess) {
+        document.getElementById('access-denied').style.display = 'none';
+        if (!isStarted) {
+            isStarted = true;
+            initFlipbook();
+        }
+    } else {
+        document.getElementById('access-denied').style.display = 'flex';
+        if (isStarted) location.reload(); 
+
+        const diff = openTime - now;
+        if (diff > 0) {
+            document.getElementById('d').innerText = String(Math.floor(diff / (1000*60*60*24))).padStart(2, '0');
+            document.getElementById('h').innerText = String(Math.floor((diff % (1000*60*60*24)) / (1000*60*60))).padStart(2, '0');
+            document.getElementById('m').innerText = String(Math.floor((diff % (1000*60*60)) / (1000*60))).padStart(2, '0');
+            document.getElementById('s').innerText = String(Math.floor((diff % (1000*60)) / 1000)).padStart(2, '0');
+            document.getElementById('status-title').innerText = "Menunggu Waktu Sidang";
+        } else {
+            document.getElementById('countdown-timer').style.display = 'none';
+            document.getElementById('status-title').innerText = "Akses Ditutup";
+            document.getElementById('status-msg').innerText = "Masa sidang laporan ini telah berakhir.";
+        }
+    }
+}
+
+/**
+ * LOGIKA RENDER PDF & FLIPBOOK
+ */
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+async function initFlipbook() {
+    try {
+        const loadingTask = pdfjsLib.getDocument(CONFIG.pdfPath);
+        const pdf = await loadingTask.promise;
+        const bookContainer = document.getElementById('book');
+        const isMobile = window.innerWidth < 768;
+
+        const firstPage = await pdf.getPage(1);
+        const vp0 = firstPage.getViewport({ scale: 1 });
+        const ratio = vp0.width / vp0.height;
+
+        let bW = isMobile ? window.innerWidth * 0.95 : (window.innerHeight * 0.85) * ratio;
+        let bH = bW / ratio;
+
+        document.getElementById('page-count').textContent = pdf.numPages;
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const vp = page.getViewport({ scale: isMobile ? 1.5 : 2 });
+            const pageDiv = document.createElement('div');
+            pageDiv.className = 'page';
+            const canvas = document.createElement('canvas');
+            canvas.height = vp.height; canvas.width = vp.width;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+            pageDiv.appendChild(canvas);
+            bookContainer.appendChild(pageDiv);
+            document.getElementById('percent').textContent = Math.round((i / pdf.numPages) * 100) + '%';
+        }
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('page-info').style.display = 'block';
+        bookContainer.style.display = 'block';
+
+        const pageFlip = new St.PageFlip(bookContainer, {
+            width: bW, height: bH, size: "fixed",
+            minWidth: bW, maxWidth: bW, minHeight: bH, maxHeight: bH,
+            usePortrait: true, showCover: true, drawShadow: true, flippingTime: 800
+        });
+
+        pageFlip.loadFromHTML(document.querySelectorAll(".page"));
+
+        // EVENT: Saat Halaman Berubah
+        pageFlip.on('flip', (e) => { 
+            document.getElementById('page-num').textContent = e.data + 1; 
+            
+            // Putar suara kertas
+            flipSound.currentTime = 0;
+            flipSound.play().catch(() => { /* Abaikan jika autoplay diblokir */ });
+        });
+
+        document.getElementById('prev-zone').addEventListener('click', () => pageFlip.flipPrev());
+        document.getElementById('next-zone').addEventListener('click', () => pageFlip.flipNext());
+
+    } catch (err) {
+        document.getElementById('loading').innerHTML = "<b style='color:red;'>Gagal!</b><br>File PDF tidak ditemukan atau korup.";
+    }
+}
+
+// Jalankan sistem waktu
+setInterval(tick, 1000);
+tick();
+</script>
+</body>
+</html>
