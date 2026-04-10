@@ -69,7 +69,15 @@
         .flip-book { box-shadow: 0 0 50px rgba(0,0,0,0.8); display: none; background: #fff; }
         .page { background-color: white; overflow: hidden; }
         canvas { width: 100% !important; height: 100% !important; display: block; }
-
+.flip-book {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: transform;
+}
+.page {
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
         .nav-area { position: absolute; top: 0; width: 20%; height: 100%; z-index: 100; cursor: pointer; }
         .nav-left { left: 0; } .nav-right { right: 0; }
 
@@ -121,8 +129,8 @@
 const CONFIG = {
     pdfPath: "docs/LPJ KOPAMA 2026dikompresi.pdf", 
     tanggalAkses: "2026-04-10", 
-    jamBuka: "11:25",
-    jamTutup: "12:00"
+    jamBuka: "12:02",
+    jamTutup: "13:30"
 };
 
 let isStarted = false;
@@ -229,9 +237,12 @@ async function initFlipbook() {
         const vp0 = firstPage.getViewport({ scale: 1 });
         const ratio = vp0.width / vp0.height;
 
-       let bW = isMobile 
+     let desktopWidth = (window.innerHeight * 0.9) * ratio;
+let maxWidth = 900; // batas aman
+
+let bW = isMobile 
     ? window.innerWidth * 0.95 
-    : (window.innerHeight * 0.92) * ratio; // diperlebar dikit
+    : Math.min(desktopWidth, maxWidth);
 
 let bH = bW / ratio;
 
@@ -239,7 +250,7 @@ let bH = bW / ratio;
 
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
-            const vp = page.getViewport({ scale: isMobile ? 1.5 : 2 });
+            const vp = page.getViewport({ scale: isMobile ? 1.4 : 1.6 });
             const pageDiv = document.createElement('div');
             pageDiv.className = 'page';
             const canvas = document.createElement('canvas');
