@@ -229,8 +229,11 @@ async function initFlipbook() {
         const vp0 = firstPage.getViewport({ scale: 1 });
         const ratio = vp0.width / vp0.height;
 
-        let bW = isMobile ? window.innerWidth * 0.95 : (window.innerHeight * 0.85) * ratio;
-        let bH = bW / ratio;
+       let bW = isMobile 
+    ? window.innerWidth * 0.95 
+    : (window.innerHeight * 0.92) * ratio; // diperlebar dikit
+
+let bH = bW / ratio;
 
         document.getElementById('page-count').textContent = pdf.numPages;
 
