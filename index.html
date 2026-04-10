@@ -100,6 +100,11 @@ canvas {
 #page-info {
     bottom: calc(20px + env(safe-area-inset-bottom));
 }
+#zoom-wrapper {
+    touch-action: none;
+    transform-origin: center center;
+    transition: transform 0.2s ease;
+}
         
         #loading { color: white; position: absolute; z-index: 500; text-align: center; }
         
@@ -134,17 +139,18 @@ canvas {
     <div class="nav-area nav-left" id="prev-zone" title="Halaman Sebelumnya"></div>
     <div class="nav-area nav-right" id="next-zone" title="Halaman Berikutnya"></div>
     <div id="page-info"><span id="page-num">1</span> / <span id="page-count"></span></div>
+<div id="zoom-wrapper">
     <div class="flip-book" id="book"></div>
-
+</div>
 </div>
 
 <script>
 
 const CONFIG = {
-    pdfPath: "docs/LPJ KOPAMA REVISI 2026_new.pdf", 
+    pdfPath: "docs/LPJ REVISI 2026 FINALL.pdf", 
     tanggalAkses: "2026-04-10", // Format: YYYY-MM-DD
     jamBuka: "21:00",
-    jamTutup: "22:00"
+    jamTutup: "23:00"
 };
 
 let isStarted = false;
@@ -374,7 +380,8 @@ if (window.innerWidth < 768) {
     // desktop (normal)
     currentPage = e.data + 1;
 }
-
+zoomWrapper.style.transform = "scale(1)";
+scale = 1;
 document.getElementById('page-num').textContent = currentPage;    
     flipSound.currentTime = 0;
     flipSound.play().catch(() => {});
@@ -393,6 +400,47 @@ document.getElementById('page-num').textContent = currentPage;
         document.getElementById('loading').innerHTML = "<b style='color:red;'>Gagal!</b><br>File PDF tidak ditemukan atau korup.";
     }
 }
+
+// zoom
+let scale = 1;
+let startDistance = 0;
+
+const zoomWrapper = document.getElementById('zoom-wrapper');
+
+// hitung jarak 2 jari
+function getDistance(touches) {
+    return Math.sqrt(
+        Math.pow(touches[0].clientX - touches[1].clientX, 2) +
+        Math.pow(touches[0].clientY - touches[1].clientY, 2)
+    );
+}
+
+zoomWrapper.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        startDistance = getDistance(e.touches);
+    }
+});
+
+zoomWrapper.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+
+        const newDistance = getDistance(e.touches);
+        let zoom = newDistance / startDistance;
+
+        // 🔥 batas zoom
+        scale = Math.min(Math.max(1, scale * zoom), 3);
+
+        zoomWrapper.style.transform = `scale(${scale})`;
+
+        startDistance = newDistance;
+    }
+});
+
+zoomWrapper.addEventListener('touchend', () => {
+    if (scale < 1) scale = 1;
+});
+//endzoom
 
 // Jalankan sistem waktu
 setInterval(tick, 1000);
