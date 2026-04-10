@@ -23,13 +23,13 @@
             position: relative; transition: filter 0.4s ease;
         }
 
-        /* Secara default, buat viewer agak blur */
+       
 #viewer-ss {
     filter: blur(40px);
     transition: filter 0.3s ease;
 }
 
-/* Hilangkan blur hanya saat layar sedang ditekan/disentuh */
+
 #viewer-ss.active {
     filter: blur(0px);
 }
@@ -74,7 +74,7 @@
         .nav-left { left: 0; } .nav-right { right: 0; }
 
         #page-info { 
-            position: absolute; bottom: 15px; background: rgba(0,0,0,0.7); 
+            position: absolute; bottom: 30px; background: rgba(0,0,0,0.7); 
             color: white; padding: 8px 18px; border-radius: 20px; 
             font-size: 14px; z-index: 110; display: none; 
         }
@@ -93,7 +93,7 @@
 <div id="access-denied">
     <div style="font-size:60px; margin-bottom: 10px;">🔒</div>
     <h1 id="status-title">Akses Terbatas</h1>
-    <p id="status-msg" style="opacity: 0.8; max-width: 80%;">Menyiapkan dokumen digital...</p>
+    <p id="status-msg" style="opacity: 0.8; max-width: 80%;">Akses Dokumen Tersedia Pada...</p>
 
     <div class="countdown-container" id="countdown-timer">
         <div class="count-box"><span class="count-num" id="d">00</span><span class="count-label">Hari</span></div>
@@ -102,7 +102,7 @@
         <div class="count-box"><span class="count-num" id="s">00</span><span class="count-label">Detik</span></div>
     </div>
 
-    <div id="schedule-text" class="time-badge">Memuat Jadwal Sidang...</div>
+    <div id="schedule-text" class="time-badge">Akses Dokumen Belum Tersedia...</div>
     <p style="margin-top:20px; font-size: 0.75em; opacity: 0.4;">Waktu Sistem: <span id="clock">--:--:--</span></p>
 </div>
 
@@ -117,12 +117,11 @@
 </div>
 
 <script>
-/** * KONFIGURASI 
- */
+
 const CONFIG = {
     pdfPath: "docs/LPJ KOPAMA 2026dikompresi.pdf", 
     tanggalAkses: "2026-04-10", 
-    jamBuka: "11:00",
+    jamBuka: "11:25",
     jamTutup: "12:00"
 };
 
@@ -204,11 +203,11 @@ function tick() {
             document.getElementById('h').innerText = String(Math.floor((diff % (1000*60*60*24)) / (1000*60*60))).padStart(2, '0');
             document.getElementById('m').innerText = String(Math.floor((diff % (1000*60*60)) / (1000*60))).padStart(2, '0');
             document.getElementById('s').innerText = String(Math.floor((diff % (1000*60)) / 1000)).padStart(2, '0');
-            document.getElementById('status-title').innerText = "Menunggu Waktu Sidang";
+            document.getElementById('status-title').innerText = "Dokumen Belum Tersedia";
         } else {
             document.getElementById('countdown-timer').style.display = 'none';
             document.getElementById('status-title').innerText = "Akses Ditutup";
-            document.getElementById('status-msg').innerText = "Masa sidang laporan ini telah berakhir.";
+            document.getElementById('status-msg').innerText = "Masa Akses Dokumen ini telah berakhir.";
         }
     }
 }
