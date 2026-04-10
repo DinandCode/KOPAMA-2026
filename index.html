@@ -143,7 +143,7 @@ canvas {
 const CONFIG = {
     pdfPath: "docs/LPJ KOPAMA REVISI 2026_new.pdf", 
     tanggalAkses: "2026-04-10", // Format: YYYY-MM-DD
-    jamBuka: "08:00",
+    jamBuka: "21:00",
     jamTutup: "22:00"
 };
 
@@ -249,7 +249,13 @@ async function initFlipbook() {
 
         const firstPage = await pdf.getPage(1);
         const vp0 = firstPage.getViewport({ scale: 1 });
-const ratio = (vp0.width / 2) / vp0.height;
+let ratio;
+
+if (isMobile) {
+    ratio = (vp0.width / 2) / vp0.height; // split
+} else {
+    ratio = vp0.width / vp0.height; // normal
+}
      let desktopWidth = (window.innerHeight * 0.9) * ratio;
 let maxWidth = 900; // batas aman
 
@@ -270,60 +276,79 @@ if (isMobile && bH > maxHeight) {
 
         document.getElementById('page-count').textContent = pdf.numPages;
 
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const vp = page.getViewport({ scale: isMobile ? 1.2 : 1.4 });
-            const pageDiv = document.createElement('div');
-            pageDiv.className = 'page';
-            const fullCanvas = document.createElement('canvas');
-fullCanvas.width = vp.width;
-fullCanvas.height = vp.height;
+      for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const vp = page.getViewport({ scale: isMobile ? 1.2 : 1.4 });
 
-const ctx = fullCanvas.getContext('2d');
+    if (isMobile) {
+        // ===== MODE MOBILE (SPLIT) =====
+        const fullCanvas = document.createElement('canvas');
+        fullCanvas.width = vp.width;
+        fullCanvas.height = vp.height;
 
-// render full dulu
-await page.render({
-    canvasContext: ctx,
-    viewport: vp
-}).promise;
+        const ctx = fullCanvas.getContext('2d');
 
-// 🔥 ukuran setengah
-const halfWidth = fullCanvas.width / 2;
-const height = fullCanvas.height;
+        await page.render({
+            canvasContext: ctx,
+            viewport: vp
+        }).promise;
 
-// ===== KIRI =====
-const leftCanvas = document.createElement('canvas');
-leftCanvas.width = halfWidth;
-leftCanvas.height = height;
+        const halfWidth = fullCanvas.width / 2;
+        const height = fullCanvas.height;
 
-leftCanvas.getContext('2d').drawImage(
-    fullCanvas,
-    0, 0, halfWidth, height,
-    0, 0, halfWidth, height
-);
+        // kiri
+        const leftCanvas = document.createElement('canvas');
+        leftCanvas.width = halfWidth;
+        leftCanvas.height = height;
 
-const leftPage = document.createElement('div');
-leftPage.className = 'page';
-leftPage.appendChild(leftCanvas);
-bookContainer.appendChild(leftPage);
+        leftCanvas.getContext('2d').drawImage(
+            fullCanvas,
+            0, 0, halfWidth, height,
+            0, 0, halfWidth, height
+        );
 
-// ===== KANAN =====
-const rightCanvas = document.createElement('canvas');
-rightCanvas.width = halfWidth;
-rightCanvas.height = height;
+        const leftPage = document.createElement('div');
+        leftPage.className = 'page';
+        leftPage.appendChild(leftCanvas);
+        bookContainer.appendChild(leftPage);
 
-rightCanvas.getContext('2d').drawImage(
-    fullCanvas,
-    halfWidth, 0, halfWidth, height,
-    0, 0, halfWidth, height
-);
+        // kanan
+        const rightCanvas = document.createElement('canvas');
+        rightCanvas.width = halfWidth;
+        rightCanvas.height = height;
 
-const rightPage = document.createElement('div');
-rightPage.className = 'page';
-rightPage.appendChild(rightCanvas);
-bookContainer.appendChild(rightPage);
-            document.getElementById('percent').textContent = Math.round((i / pdf.numPages) * 100) + '%';
-        }
+        rightCanvas.getContext('2d').drawImage(
+            fullCanvas,
+            halfWidth, 0, halfWidth, height,
+            0, 0, halfWidth, height
+        );
+
+        const rightPage = document.createElement('div');
+        rightPage.className = 'page';
+        rightPage.appendChild(rightCanvas);
+        bookContainer.appendChild(rightPage);
+
+    } else {
+        // ===== MODE DESKTOP (NORMAL) =====
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'page';
+
+        const canvas = document.createElement('canvas');
+        canvas.height = vp.height;
+        canvas.width = vp.width;
+
+        await page.render({
+            canvasContext: canvas.getContext('2d'),
+            viewport: vp
+        }).promise;
+
+        pageDiv.appendChild(canvas);
+        bookContainer.appendChild(pageDiv);
+    }
+
+    document.getElementById('percent').textContent =
+        Math.round((i / pdf.numPages) * 100) + '%';
+}
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('page-info').style.display = 'block';
@@ -340,8 +365,17 @@ bookContainer.appendChild(rightPage);
 }, 100);
         // EVENT: Saat Halaman Berubah
        pageFlip.on('flip', async (e) => { 
-    document.getElementById('page-num').textContent = e.data + 1; 
-    
+let currentPage;
+
+if (window.innerWidth < 768) {
+    // mobile (split)
+    currentPage = Math.floor(e.data / 2) + 1;
+} else {
+    // desktop (normal)
+    currentPage = e.data + 1;
+}
+
+document.getElementById('page-num').textContent = currentPage;    
     flipSound.currentTime = 0;
     flipSound.play().catch(() => {});
 
