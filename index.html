@@ -249,16 +249,24 @@ async function initFlipbook() {
 
         const firstPage = await pdf.getPage(1);
         const vp0 = firstPage.getViewport({ scale: 1 });
-        const ratio = vp0.width / vp0.height;
-
+const ratio = (vp0.width / 2) / vp0.height;
      let desktopWidth = (window.innerHeight * 0.9) * ratio;
 let maxWidth = 900; // batas aman
 
 let bW = isMobile 
-    ? window.innerWidth * 1 
+    ? window.innerWidth * 0.98 
     : Math.min(desktopWidth, maxWidth);
 
 let bH = bW / ratio;
+
+// limit tinggi mobile
+let maxHeight = window.innerHeight * 0.85;
+if (isMobile && bH > maxHeight) {
+    bH = maxHeight;
+    bW = bH * ratio;
+}
+
+
 
         document.getElementById('page-count').textContent = pdf.numPages;
 
@@ -267,11 +275,53 @@ let bH = bW / ratio;
             const vp = page.getViewport({ scale: isMobile ? 1.2 : 1.4 });
             const pageDiv = document.createElement('div');
             pageDiv.className = 'page';
-            const canvas = document.createElement('canvas');
-            canvas.height = vp.height; canvas.width = vp.width;
-            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-            pageDiv.appendChild(canvas);
-            bookContainer.appendChild(pageDiv);
+            const fullCanvas = document.createElement('canvas');
+fullCanvas.width = vp.width;
+fullCanvas.height = vp.height;
+
+const ctx = fullCanvas.getContext('2d');
+
+// render full dulu
+await page.render({
+    canvasContext: ctx,
+    viewport: vp
+}).promise;
+
+// 🔥 ukuran setengah
+const halfWidth = fullCanvas.width / 2;
+const height = fullCanvas.height;
+
+// ===== KIRI =====
+const leftCanvas = document.createElement('canvas');
+leftCanvas.width = halfWidth;
+leftCanvas.height = height;
+
+leftCanvas.getContext('2d').drawImage(
+    fullCanvas,
+    0, 0, halfWidth, height,
+    0, 0, halfWidth, height
+);
+
+const leftPage = document.createElement('div');
+leftPage.className = 'page';
+leftPage.appendChild(leftCanvas);
+bookContainer.appendChild(leftPage);
+
+// ===== KANAN =====
+const rightCanvas = document.createElement('canvas');
+rightCanvas.width = halfWidth;
+rightCanvas.height = height;
+
+rightCanvas.getContext('2d').drawImage(
+    fullCanvas,
+    halfWidth, 0, halfWidth, height,
+    0, 0, halfWidth, height
+);
+
+const rightPage = document.createElement('div');
+rightPage.className = 'page';
+rightPage.appendChild(rightCanvas);
+bookContainer.appendChild(rightPage);
             document.getElementById('percent').textContent = Math.round((i / pdf.numPages) * 100) + '%';
         }
 
